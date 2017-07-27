@@ -35,6 +35,7 @@ import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
 import android.net.Uri;
 import android.os.Build;
+import android.util.Log;
 
 import io.github.pwlin.cordova.plugins.fileopener2.FileProvider;
 
