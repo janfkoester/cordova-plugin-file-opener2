@@ -133,16 +133,27 @@ public class FileOpener2 extends CordovaPlugin {
 					intent.setDataAndType(path, contentType);
 					intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
 				}
+				
+				
+				Log.w("HOERMANN", "send intent");
+				Intent shareIntent = new Intent();
+				shareIntent.setAction(Intent.ACTION_SEND);
+				shareIntent.putExtra(Intent.EXTRA_STREAM, path);
+				shareIntent.setType(contentType);
+				startActivity(Intent.createChooser(shareIntent, getResources().getText(R.string.send_to)));
+
+
 				/*
 				 * @see
 				 * http://stackoverflow.com/questions/14321376/open-an-activity-from-a-cordovaplugin
-				 */
-				 if(openWithDefault){
-					 cordova.getActivity().startActivity(intent);
-				 }
-				 else{
-					 cordova.getActivity().startActivity(Intent.createChooser(intent, "Open File in..."));
-				 }
+				 *
+				 *if(openWithDefault){
+				*	 cordova.getActivity().startActivity(intent);
+				 *}
+				 *else{
+				*	 cordova.getActivity().startActivity(Intent.createChooser(intent, "Open File in..."));
+				* }
+				*/
 
 				callbackContext.success();
 			} catch (android.content.ActivityNotFoundException e) {
