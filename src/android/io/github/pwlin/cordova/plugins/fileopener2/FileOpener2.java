@@ -140,7 +140,7 @@ public class FileOpener2 extends CordovaPlugin {
 				shareIntent.setAction(Intent.ACTION_SEND);
 				shareIntent.putExtra(Intent.EXTRA_STREAM, path);
 				shareIntent.setType(contentType);
-				startActivity(Intent.createChooser(shareIntent, getResources().getText(R.string.send_to)));
+				startActivity(Intent.createChooser(shareIntent, "Open File in..."));
 
 
 				/*
