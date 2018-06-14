@@ -35,7 +35,6 @@ import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
 import android.net.Uri;
 import android.os.Build;
-import android.util.Log;
 
 import io.github.pwlin.cordova.plugins.fileopener2.FileProvider;
 
@@ -43,6 +42,8 @@ import org.apache.cordova.CordovaPlugin;
 import org.apache.cordova.CallbackContext;
 import org.apache.cordova.PluginResult;
 import org.apache.cordova.CordovaResourceApi;
+import 	android.os.StrictMode;
+import java.lang.reflect.Method;
 
 public class FileOpener2 extends CordovaPlugin {
 
@@ -92,14 +93,11 @@ public class FileOpener2 extends CordovaPlugin {
 	}
 
 	private void _open(String fileArg, String contentType, Boolean openWithDefault, CallbackContext callbackContext) throws JSONException {
-		Log.w("HOERMANN", "_open is called");
 		String fileName = "";
 		try {
 			CordovaResourceApi resourceApi = webView.getResourceApi();
 			Uri fileUri = resourceApi.remapUri(Uri.parse(fileArg));
-			Log.w("HOERMANN", "fileUri after resourceApi.remapUri" + fileUri);
 			fileName = this.stripFileProtocol(fileUri.toString());
-			Log.w("HOERMANN", "fileName after stripFileProtocol" + fileName);
 		} catch (Exception e) {
 			fileName = fileArg;
 		}
@@ -107,34 +105,41 @@ public class FileOpener2 extends CordovaPlugin {
 		if (file.exists()) {
 			try {
 				Uri path = Uri.fromFile(file);
-				Log.w("HOERMANN", "Uri path  after  Uri.fromFile(file" + path);
 				Intent intent = new Intent(Intent.ACTION_VIEW);
-				Log.w("HOERMANN", "if((Build.VERSION.SDK_INT >= 23  check");
-				if((Build.VERSION.SDK_INT >= 23 && !contentType.equals("application/vnd.android.package-archive")) || ((Build.VERSION.SDK_INT == 24 || Build.VERSION.SDK_INT == 25) && contentType.equals("application/vnd.android.package-archive"))) {
-					Log.w("HOERMANN", "Build.VERSION.SDK_INT >= 23");
+				if((Build.VERSION.SDK_INT > 23 && !contentType.equals("application/vnd.android.package-archive")) || ((Build.VERSION.SDK_INT == 24 || Build.VERSION.SDK_INT == 25) && contentType.equals("application/vnd.android.package-archive"))) {
+
 					Context context = cordova.getActivity().getApplicationContext();
 					path = FileProvider.getUriForFile(context, cordova.getActivity().getPackageName() + ".opener.provider", file);
 					intent.setDataAndType(path, contentType);
 					intent.setFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
-					intent.setFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
 					intent.setFlags(Intent.FLAG_ACTIVITY_NO_HISTORY);
 					//intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
 
 				 	List<ResolveInfo> infoList = context.getPackageManager().queryIntentActivities(intent, PackageManager.MATCH_DEFAULT_ONLY);
 					for (ResolveInfo resolveInfo : infoList) {
-				    String packageName = resolveInfo.activityInfo.packageName;
-					Log.w("HOERMANN", "packageName: " + packageName);
-					Log.w("HOERMANN", "path: " + path);
-				    context.grantUriPermission(packageName, path, Intent.FLAG_GRANT_WRITE_URI_PERMISSION | Intent.FLAG_GRANT_READ_URI_PERMISSION);
+						String packageName = resolveInfo.activityInfo.packageName;
+						context.grantUriPermission(packageName, path, Intent.FLAG_GRANT_WRITE_URI_PERMISSION | Intent.FLAG_GRANT_READ_URI_PERMISSION);
+						
+						// JFK 28.07.2017 https://stackoverflow.com/questions/38200282/android-os-fileuriexposedexception-file-storage-emulated-0-test-txt-exposed
+						// If your app targets API 24+, and you still want/need to use file:// intents, you can use hacky way to disable the runtime check
+						//if("com.adobe.reader".equals(packageName)) { TMODL: activated for all packages
+							try {
+								// disable death on file uri exception (occurs when apps send file:// uris with intent to other apps on android sdk >= 24)
+								Method m = StrictMode.class.getMethod("disableDeathOnFileUriExposure");
+								m.invoke(null);
+								// use file:// uri instead of content:// uri
+								intent.setDataAndType(Uri.fromFile(file), contentType);
+							}
+							catch(Exception e){
+								e.printStackTrace();
+							}
+						//}
 					}
 				}
 				else {
-					Log.w("HOERMANN", "NICHT Build.VERSION.SDK_INT >= 23");
 					intent.setDataAndType(path, contentType);
 					intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
 				}
-				
-				
 				/*
 				 * @see
 				 * http://stackoverflow.com/questions/14321376/open-an-activity-from-a-cordovaplugin
